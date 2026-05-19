@@ -1,0 +1,33 @@
+# ========================
+# Python / Backend
+# ========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.env
+.venv/
+venv/
+*.db
+
+# Uploaded files (user PDFs)
+backend/uploaded_files/
+
+# ========================
+# Node / Frontend
+# ========================
+node_modules/
+.next/
+out/
+build/
+*.tsbuildinfo
+
+# ========================
+# OS / Editor
+# ========================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
