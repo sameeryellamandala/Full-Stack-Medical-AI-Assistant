@@ -218,33 +218,7 @@ This architecture makes the system easier to extend with additional tools and sp
 * Agentic AI
 * Stateful AI Workflows
 
----
 
-# 📂 Project Structure
-
-```text
-Full-Stack-Medical-AI-Assistant
-│
-├── backend
-│   │
-│   ├── uploaded_files/
-│   │
-│   ├── main.py
-│   ├── ingest_data.py
-│   ├── chat_history.py
-│   └── requirements.txt
-│
-├── med-ai-frontend
-│   │
-│   ├── app/
-│   ├── clerk-nextjs/
-│   ├── public/
-│   ├── package.json
-│   └── ...
-│
-├── .gitignore
-└── README.md
-```
 
 ---
 
