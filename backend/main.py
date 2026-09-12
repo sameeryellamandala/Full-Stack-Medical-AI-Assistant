@@ -1,14 +1,16 @@
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
 from typing import Annotated, TypedDict, List, Optional
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_groq import ChatGroq
-from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage, AIMessage
 from langchain_pinecone import PineconeVectorStore
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 import shutil
+from pydantic import BaseModel, Field
 
 from dotenv import load_dotenv
 
@@ -22,90 +24,18 @@ from chat_history import (
     update_session_document, touch_session
 )
 
-# 1. Define the LangGraph State (The Memory)
-class AgentState(TypedDict):
-    messages: Annotated[List[BaseMessage], "The chat history"]
-    file_context: str
-    safety_flag: bool
-    user_id: str
-    active_document: str  # Track which PDF the user is asking about
-
-# 2. Initialize Groq LLM (Llama 3.3 70B)
+# 1. Initialize Groq LLM
 llm = ChatGroq(
-    model="llama-3.3-70b-versatile",
+    model="openai/gpt-oss-20b",
     api_key=os.getenv("GROQ_API_KEY"),
-    temperature=0.1
+    temperature=0.1,
+    max_tokens=4096
 )
 
-# --- LANGGRAPH NODES ---
+# 2. Import Graph
+from graph.graph import create_graph
+app_brain = create_graph(llm)
 
-def vision_node(state: AgentState):
-    """Placeholder for Gemini Image Processing"""
-    return {"file_context": "Image processed", "safety_flag": True}
-
-def rag_node(state: AgentState):
-    # Initialize Embeddings
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
-    
-    # Connect to your existing Pinecone Index
-    vectorstore = PineconeVectorStore(
-        index_name=os.getenv("PINECONE_INDEX_NAME"), 
-        embedding=embeddings
-    )
-    
-    # Search for the top 3 most relevant parts of the PDF
-    last_message = state['messages'][-1].content
-    
-    # Filter by active document if one is set
-    active_doc = state.get('active_document', '')
-    if active_doc:
-        print(f"  RAG: Filtering search to document '{active_doc}'")
-        docs = vectorstore.similarity_search(
-            last_message, k=3,
-            filter={"source_filename": active_doc}
-        )
-    else:
-        print("  RAG: No active document filter, searching ALL documents")
-        docs = vectorstore.similarity_search(last_message, k=3)
-    
-    print(f"  RAG: Found {len(docs)} relevant chunks")
-    context = "\n".join([doc.page_content for doc in docs])
-    
-    return {"file_context": context}
-
-def generator_node(state: AgentState):
-    """Generates the final response using Groq (Llama 3.3)"""
-    system_prompt = SystemMessage(
-        content="You are a professional Medical AI Assistant. Be concise and helpful. Answer based ONLY on the provided context from the uploaded document."
-    )
-    
-    inputs = [system_prompt] + state['messages']
-    
-    # Add file context if it exists
-    if state.get('file_context'):
-        inputs.append(SystemMessage(content=f"Context from files: {state['file_context']}"))
-        
-    response = llm.invoke(inputs)
-    return {"messages": [response]}
-
-# --- GRAPH CONSTRUCTION ---
-
-workflow = StateGraph(AgentState)
-
-# Add Nodes
-workflow.add_node("vision_processor", vision_node)
-workflow.add_node("document_retriever", rag_node)
-workflow.add_node("final_generator", generator_node)
-
-# Set up edges (Simplified routing for now)
-workflow.set_entry_point("document_retriever")
-workflow.add_edge("vision_processor", "final_generator")
-workflow.add_edge("document_retriever", "final_generator")
-workflow.add_edge("final_generator", END)
-
-# Memory Checkpointer
-memory = MemorySaver()
-app_brain = workflow.compile(checkpointer=memory)
 
 # --- FASTAPI SERVER ---
 
@@ -205,7 +135,8 @@ async def chat_endpoint(
             "messages": [HumanMessage(content=message)], 
             "user_id": user_id,
             "file_context": "",
-            "safety_flag": False,
+            "intent": "",
+            "safety_level": "",
             "active_document": active_document
         }
         result = app_brain.invoke(inputs, config=config)
@@ -252,7 +183,7 @@ async def upload_document(
             
         # 3. Process the file into Pinecone!
         print(f"File received from user {user_id}. Starting ingestion...")
-        result = ingest_pdf(file_path)
+        result = ingest_pdf(file_path, user_id=user_id)
         
         # 4. Update session with document info
         if session_id:
