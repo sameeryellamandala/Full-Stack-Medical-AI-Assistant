@@ -375,7 +375,6 @@ Because conversation history is maintained, the assistant can understand that **
 //output 
 <img width="1897" height="993" alt="Screenshot 2026-09-12 102925" src="https://github.com/user-attachments/assets/f6b8aeb1-0bc8-49e3-b955-76e93f6552b8" />
 <img width="1911" height="1045" alt="Screenshot 2026-09-12 102948" src="https://github.com/user-attachments/assets/42da07ac-d271-491a-ac62-f347ffe291ae" />
-<img width="1603" height="912" alt="Screenshot 2026-08-25 000600" src="https://github.com/user-attachments/assets/78fad541-aa01-4b48-8a75-11b56458fd5a" />
 
 <img width="1548" height="852" alt="Screenshot 2026-09-12 102853" src="https://github.com/user-attachments/assets/586f570f-0d83-4aef-aa29-92ff488c4c14" />
 <img width="1902" height="997" alt="Screenshot 2026-09-12 102913" src="https://github.com/user-attachments/assets/9de17237-4b14-498b-a404-23b6a245723d" />
